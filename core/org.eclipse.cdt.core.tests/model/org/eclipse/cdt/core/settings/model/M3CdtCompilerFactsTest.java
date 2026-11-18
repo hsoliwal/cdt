@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import org.eclipse.cdt.core.dom.IPDOMManager;
 import org.eclipse.cdt.core.model.CoreModel;
@@ -72,6 +71,28 @@ public class M3CdtCompilerFactsTest extends BaseTestCase5 {
         assertEquals(before.scannerSha256(), nextEclipseConfig.scannerSha256(),
                 "Eclipse IBuildConfiguration is distinct from CDT scanner identity");
         assertFalse(description.isModified(), "read-only capture must not modify CDT");
+    }
+
+    @Test
+    public void selectedCdtConfigurationRemainsDistinctFromTheActiveConfiguration() throws Exception {
+        ICProject original = CProjectHelper.createNewStyleCProject(
+                "M3CdtCompilerFactsMulti", IPDOMManager.ID_NO_INDEXER);
+        project = original.getProject();
+        ICProjectDescription writable = CoreModel.getDefault().getProjectDescription(project);
+        ICConfigurationDescription initial = writable.getActiveConfiguration();
+        String activeId = initial.getId();
+        ICConfigurationDescription alternate = writable.createConfiguration(
+                "m3.test.cdt.alternate", "Release", initial);
+        CoreModel.getDefault().setProjectDescription(project, writable);
+        var selected = M3CdtCompilerFacts.capture(project,
+                alternate.getId(), "Eclipse-Debug", INVOCATION, null);
+        assertEquals(alternate.getId(), selected.cdtConfigId());
+        assertEquals("Release", selected.cdtConfigName());
+        assertEquals(activeId, selected.cdtActiveConfigId(),
+                "the active CDT configuration must not be guessed from the selected one");
+        assertEquals("Eclipse-Debug", selected.eclipseSelected());
+        assertNotEquals(selected.cdtConfigId(), selected.cdtActiveConfigId());
+        assertFalse(selected.authorizesBuildSkipping());
     }
 
     @Test
