@@ -74,3 +74,24 @@ uses CDT's real `CProjectHelper.createNewStyleCProject` fixture to
 test stable read-only digests, exact selected versus active CDT
 configurations, foreign configuration refusal and cancellation. The
 original CDT/Tycho suite must run before declaring qualification.
+
+## Strict original CDT/Tycho acceptance
+
+`.github/workflows/m3-cdt-compiler-facts.yml` runs the original CDT
+reactor with Java 25, Maven 3.9.9 and Xvfb, but **without** the
+`maven.test.failure.ignore=true` flag in the regular fork workflow.
+After verification, the standalone JDK-only Java checker
+`m3/tools/M3CdtTestReceiptMain.java` reads the original
+`core/org.eclipse.cdt.core.tests/target/surefire-reports` XML.
+All four `M3CdtCompilerFactsTest` methods must have run without skips,
+errors or failures; missing, duplicated or unexpected cases fail.
+The XML parser forbids DTD/external entities and symlinked/oversized
+report files.
+
+The result checker itself was compiled locally with
+`javac --release 21 -Xlint:all -Werror` and tested against synthetic
+JUnit XML: an exact four-case report passed, and skipped, failed or
+incomplete results were rejected. This verifies **only the acceptance
+checker**, not that the full CDT/Tycho runtime test suite has passed.
+Actual source-owner CDT build and test results are required before
+merging or qualifying the implementation.
