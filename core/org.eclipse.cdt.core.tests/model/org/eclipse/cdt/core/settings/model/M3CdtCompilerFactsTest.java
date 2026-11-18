@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 
 import org.eclipse.cdt.core.dom.IPDOMManager;
 import org.eclipse.cdt.core.model.CoreModel;
@@ -93,6 +94,20 @@ public class M3CdtCompilerFactsTest extends BaseTestCase5 {
         assertEquals("Eclipse-Debug", selected.eclipseSelected());
         assertNotEquals(selected.cdtConfigId(), selected.cdtActiveConfigId());
         assertFalse(selected.authorizesBuildSkipping());
+    }
+
+    @Test
+    public void producerMatchesTheIndependentMavenCdtPacketFixture() throws Exception {
+        var model = new M3CdtCompilerFacts.Snapshot(
+                "Mixed", INVOCATION, "Debug", "cdt.native.debug", "Debug (native)",
+                "cdt.native.release", "org.eclipse.cdt.managedbuilder",
+                "a".repeat(64), "b".repeat(64), "c".repeat(64), 2, 3, 17);
+        try (var source = M3CdtCompilerFactsTest.class.getResourceAsStream(
+                "/resources/m3-cdt-compiler-facts-v1.fixture")) {
+            if (source == null) throw new IOException("missing original CDT golden fixture");
+            org.junit.jupiter.api.Assertions.assertArrayEquals(source.readAllBytes(),
+                    model.toExchangeBytes(), "CDT and Maven original packet schema must match");
+        }
     }
 
     @Test
