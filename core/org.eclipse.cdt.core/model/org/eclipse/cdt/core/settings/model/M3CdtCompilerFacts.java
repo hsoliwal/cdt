@@ -250,6 +250,30 @@ public final class M3CdtCompilerFacts {
             number(md, entry.getFlags());
             frame(md, entry.getName());
             frame(md, entry.getValue());
+            // Paths and exclusions are part of the original effective source
+            // and scanner settings; names alone cannot identify a source root.
+            if (entry instanceof ICPathEntry path) {
+                number(md, 1);
+                frame(md, portable(path.getFullPath()));
+                frame(md, portable(path.getLocation()));
+                number(md, path.isValueWorkspacePath() ? 1 : 0);
+            } else {
+                number(md, 0);
+            }
+            if (entry instanceof ICExclusionPatternPathEntry excluded) {
+                IPath[] patterns = excluded.getExclusionPatterns();
+                if (patterns == null) {
+                    number(md, -1);
+                } else {
+                    if (patterns.length > MAX_ENTRIES) {
+                        throw new IllegalArgumentException("CDT exclusion pattern budget exceeded");
+                    }
+                    number(md, patterns.length);
+                    for (IPath pattern : patterns) frame(md, portable(pattern));
+                }
+            } else {
+                number(md, -1);
+            }
         }
         return entries.length;
     }
