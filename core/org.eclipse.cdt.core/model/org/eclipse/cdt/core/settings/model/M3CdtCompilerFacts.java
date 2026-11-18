@@ -12,10 +12,7 @@ package org.eclipse.cdt.core.settings.model;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -189,7 +186,7 @@ public final class M3CdtCompilerFacts {
             }
         }
         int languageCount = 0;
-        int entryCount = 0;
+        long entryCount = 0;
         number(scanner, byPath.size());
         for (var item : byPath.entrySet()) {
             canceled(monitor);
@@ -237,7 +234,7 @@ public final class M3CdtCompilerFacts {
                 selected.getId(), selected.getName(), active.getId(),
                 selected.getBuildSystemId(), HexFormat.of().formatHex(scanner.digest()),
                 HexFormat.of().formatHex(sources.digest()), HexFormat.of().formatHex(build.digest()),
-                byPath.size(), languageCount, entryCount);
+                byPath.size(), languageCount, (int) entryCount);
     }
 
     /** Null and empty CDT arrays are distinct original-owner observations. */
@@ -302,6 +299,12 @@ public final class M3CdtCompilerFacts {
     }
 
     private static void frame(MessageDigest md, String text) {
+        // The CDT API explicitly allows a null language ID and, for certain
+        // setting kinds, absent entry values. Keep null distinct from "".
+        if (text == null) {
+            number(md, -1);
+            return;
+        }
         byte[] bytes = valid(text, true).getBytes(StandardCharsets.UTF_8);
         number(md, bytes.length);
         md.update(bytes);
