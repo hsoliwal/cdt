@@ -9,7 +9,13 @@
  *******************************************************************************/
 package org.eclipse.cdt.core.settings.model;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -235,6 +241,44 @@ public final class M3CdtCompilerFacts {
                 selected.getBuildSystemId(), HexFormat.of().formatHex(scanner.digest()),
                 HexFormat.of().formatHex(sources.digest()), HexFormat.of().formatHex(build.digest()),
                 byPath.size(), languageCount, (int) entryCount);
+    }
+
+    /**
+     * Explicit export only, never a CDI/CDT build side effect. An original
+     * workspace owner must provide a unique generation-local destination.
+     * Repeated equal bytes are idempotent; conflicting bytes and symlinks fail.
+     */
+    public static Path writeSnapshot(Snapshot snapshot, Path projectRoot, Path packetFile)
+            throws IOException {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Path root = Objects.requireNonNull(projectRoot, "projectRoot").toRealPath();
+        Path requested = Objects.requireNonNull(packetFile, "packetFile");
+        Path file = (requested.isAbsolute() ? requested : root.resolve(requested)).normalize();
+        if (!file.startsWith(root) || file.equals(root)) {
+            throw new IOException("CDT facts packet must stay within the original project");
+        }
+        Path path = root;
+        for (Path part : root.relativize(file)) {
+            path = path.resolve(part);
+            if (Files.isSymbolicLink(path)) {
+                throw new IOException("CDT facts packet must not traverse a symbolic link");
+            }
+        }
+        if (!Files.isDirectory(file.getParent(), LinkOption.NOFOLLOW_LINKS)) {
+            throw new IOException("CDT facts packet parent directory must already exist");
+        }
+        byte[] expected = snapshot.toExchangeBytes();
+        if (Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
+            if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)
+                    || Files.size(file) != expected.length
+                    || !Arrays.equals(Files.readAllBytes(file), expected)) {
+                throw new IOException("refusing conflicting original CDT facts packet");
+            }
+            return file;
+        }
+        Files.write(file, expected, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE,
+                LinkOption.NOFOLLOW_LINKS);
+        return file;
     }
 
     /** Null and empty CDT arrays are distinct original-owner observations. */
