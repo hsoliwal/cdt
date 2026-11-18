@@ -12,7 +12,6 @@ package org.eclipse.cdt.core.settings.model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -48,6 +47,7 @@ public class M3CdtCompilerFactsTest extends BaseTestCase5 {
         project = original.getProject();
         ICProjectDescription description = CoreModel.getDefault().getProjectDescription(project, false);
         ICConfigurationDescription selected = description.getActiveConfiguration();
+        boolean originallyModified = description.isModified();
         var before = M3CdtCompilerFacts.capture(
                 project, selected.getId(), "Debug", INVOCATION, null);
         assertEquals(project.getName(), before.project());
@@ -71,7 +71,8 @@ public class M3CdtCompilerFactsTest extends BaseTestCase5 {
         assertNotEquals(before.eclipseSelected(), nextEclipseConfig.eclipseSelected());
         assertEquals(before.scannerSha256(), nextEclipseConfig.scannerSha256(),
                 "Eclipse IBuildConfiguration is distinct from CDT scanner identity");
-        assertFalse(description.isModified(), "read-only capture must not modify CDT");
+        assertEquals(originallyModified, description.isModified(),
+                "read-only capture must preserve the original CDT model modification state");
     }
 
     @Test
@@ -115,17 +116,31 @@ public class M3CdtCompilerFactsTest extends BaseTestCase5 {
         ICProject original = CProjectHelper.createNewStyleCProject(
                 "M3CdtCompilerFactsRefusal", IPDOMManager.ID_NO_INDEXER);
         project = original.getProject();
-        assertThrows(IllegalArgumentException.class,
+        rejects(IllegalArgumentException.class,
                 () -> M3CdtCompilerFacts.capture(
                         project, "vendor.unknown.cdt.config", "Debug", INVOCATION, null));
         NullProgressMonitor canceled = new NullProgressMonitor();
         canceled.setCanceled(true);
-        assertThrows(OperationCanceledException.class,
+        rejects(OperationCanceledException.class,
                 () -> M3CdtCompilerFacts.capture(
                         project, "vendor.unknown.cdt.config", "Debug", INVOCATION, canceled));
-        assertThrows(IllegalArgumentException.class,
+        rejects(IllegalArgumentException.class,
                 () -> new M3CdtCompilerFacts.Snapshot(
                         "Project", INVOCATION, "Debug", "cdt.id", "Debug", "cdt.active",
                         "CDT", "A".repeat(64), "b".repeat(64), "c".repeat(64), 0, 0, 0));
+    }
+    @FunctionalInterface
+    private interface CheckedOperation { void perform() throws Exception; }
+
+    /** Avoid Tycho bundle restrictions on the JUnit Executable package. */
+    private static void rejects(Class<? extends Exception> expected, CheckedOperation action)
+            throws Exception {
+        try {
+            action.perform();
+        } catch (Exception failure) {
+            if (expected.isInstance(failure)) return;
+            throw failure;
+        }
+        throw new AssertionError("Expected original CDT exception: " + expected.getName());
     }
 }
