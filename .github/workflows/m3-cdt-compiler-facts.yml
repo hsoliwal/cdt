@@ -41,6 +41,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install build-essential gcc g++ gdb gdbserver xvfb
+      - name: Allow gdb to attach to test processes (as Build and Test does)
+        # dsf-gdb attach tests fail with "Cannot attach to process: Operation not
+        # permitted" under the runner's default Yama ptrace_scope of 1.
+        run: echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
       - name: Compile and run original CDT/Tycho test suite without ignored failures
         shell: bash
         run: |
@@ -51,6 +55,7 @@ jobs:
             -DskipTests=false \
             -DexcludedGroups=flakyTest,slowTest,jdt-ui-bug \
             -Dindexer.timeout=300 \
+            -Ddsf.gdb.tests.timeout.multiplier=50 \
             -Dsurefire.rerunFailingTestsCount=0
       - name: Require original four CDT scanner facts JUnit tests, zero skips and failures
         run: |

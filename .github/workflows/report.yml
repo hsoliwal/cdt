@@ -11,6 +11,15 @@ jobs:
     name: Unit Test Results
     runs-on: ubuntu-24.04
     if: github.event.workflow_run.conclusion != 'skipped'
+    # The fork's default GITHUB_TOKEN is read-only, so creating the check run failed
+    # with 403. These are the permissions publish-unit-test-result-action documents
+    # for workflow_run use; actions: read lets the download step read the artifact.
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+      issues: read
+      actions: read
 
     steps:
       - name: Download Test Report

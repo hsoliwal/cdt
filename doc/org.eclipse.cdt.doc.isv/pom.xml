@@ -125,7 +125,7 @@
 											<additionalArgument>-doctitle "Eclipse CDT API Specification"
 											</additionalArgument>
 											<additionalArgument>-link "https://docs.oracle.com/en/java/javase/11/docs/api/"</additionalArgument>
-											<additionalArgument>-linkoffline ../../org.eclipse.platform.doc.isv/reference/api
+											<additionalArgument>-linkoffline ../../org.eclipse.platform.doc.isv/reference/api https://help.eclipse.org/latest/topic/org.eclipse.platform.doc.isv/reference/api/
 											</additionalArgument>
 											<additionalArgument>-public</additionalArgument>
 											<additionalArgument>-header "Eclipse CDT 12.7.0"
