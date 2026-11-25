@@ -190,3 +190,5 @@ cdtOptions text
 *.xhtml text
 *.entitlements text
 *.adoc text
+*.fixture text
+*.tsv text
